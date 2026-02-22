@@ -10,9 +10,18 @@ use std::{slice, vec};
 use crate::{ModifyError, slice_range};
 
 #[repr(transparent)]
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VecMin<T, const M: usize> {
     vec: Vec<T>,
+}
+
+impl<T: Debug, const M: usize> Debug for VecMin<T, M> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("VecMin")
+            .field("min", &M)
+            .field("vec", &self.vec)
+            .finish()
+    }
 }
 
 // --- Custom ---
@@ -27,6 +36,12 @@ impl<T, const M: usize> VecMin<T, M> {
     #[inline]
     pub const fn min_slice(&self) -> &[T; M] {
         unsafe { &*(self.vec.as_ptr() as *const [T; M]) }
+    }
+
+    /// Returns a mutable slice to the first `M` elements of the vector, which are guaranteed to exist.
+    #[inline]
+    pub const fn min_slice_mut(&mut self) -> &mut [T; M] {
+        unsafe { &mut *(self.vec.as_ptr() as *mut [T; M]) }
     }
 }
 
@@ -206,6 +221,17 @@ impl<T: Clone, const N: usize, const M: usize> TryFrom<&mut [T; N]> for VecMin<T
     }
 }
 
+impl<T, const N: usize, const M: usize> TryInto<[T; N]> for VecMin<T, M> {
+    type Error = VecMin<T, M>;
+
+    #[inline]
+    fn try_into(self) -> Result<[T; N], Self::Error> {
+        self.vec
+            .try_into()
+            .map_err(|vec| unsafe { Self::new_unchecked(vec) })
+    }
+}
+
 // --- View ---
 impl<T, const M: usize> VecMin<T, M> {
     #[inline]
@@ -315,6 +341,25 @@ impl<'a, T: 'a, const M: usize> IntoIterator for &'a mut VecMin<T, M> {
 }
 
 // --- Immutable Access ---
+impl<T, const M: usize> VecMin<T, M> {
+    /// See [`Vec::capacity`].
+    #[inline]
+    pub fn capacity(&self) -> usize {
+        self.vec.capacity()
+    }
+
+    /// See [`Vec::len`].
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.vec.len()
+    }
+
+    /// See [`Vec::is_empty`].
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.vec.is_empty()
+    }
+}
 
 // --- Mutable Access ---
 
@@ -441,6 +486,35 @@ impl<T, const M: usize> VecMin<T, M> {
     #[must_use]
     pub unsafe fn pop_unchecked(&mut self) -> Option<T> {
         self.vec.pop()
+    }
+
+    /// See [`Vec::pop_if`]. Returns an error if the operation would reduce the length of the vector below `M`.
+    #[inline]
+    pub fn pop_if(
+        &mut self,
+        pred: impl FnOnce(&mut T) -> bool,
+    ) -> Result<Option<T>, ModifyError<M>> {
+        if self.vec.len() > M {
+            Ok(self.vec.pop_if(pred))
+        } else {
+            Err(ModifyError)
+        }
+    }
+
+    /// See [`Vec::pop_if`]. Pops an element from the vector if the length of the vector is greater than `M` and the provided predicate returns `true`, otherwise does nothing and returns `None`.
+    #[inline]
+    pub fn pop_to_min_if(&mut self, pred: impl FnOnce(&mut T) -> bool) -> Option<T> {
+        if self.vec.len() > M {
+            self.vec.pop_if(pred)
+        } else {
+            None
+        }
+    }
+
+    /// See [`Vec::pop_if`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    #[inline]
+    pub unsafe fn pop_if_unchecked(&mut self, pred: impl FnOnce(&mut T) -> bool) -> Option<T> {
+        self.vec.pop_if(pred)
     }
 
     /// See [`Vec::remove`]. Returns an error if the operation would reduce the length of the vector below `M`.
