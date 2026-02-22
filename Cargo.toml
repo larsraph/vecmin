@@ -4,7 +4,3 @@ name = "vec_min"
 version = "0.1.0"
 
 [dependencies]
-smallvec = {version = "1.15.1", optional = true}
-
-[features]
-smallvec = ["dep:smallvec"]
