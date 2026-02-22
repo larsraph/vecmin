@@ -756,22 +756,6 @@ impl<T, const M: usize> VecMin<T, M> {
         }
     }
 
-    /// See [`Vec::split_off`]. Returns an error if the operation would reduce the length of the vector below `M`.
-    #[inline]
-    pub fn split_off(&mut self, at: usize) -> Result<Vec<T>, ModifyError<M>> {
-        if at >= M {
-            Ok(self.vec.split_off(at))
-        } else {
-            Err(ModifyError)
-        }
-    }
-
-    /// See [`Vec::split_off`]. Doesn't check if the operation would reduce the length of the vector below `M`.
-    #[inline]
-    pub unsafe fn split_off_unchecked(&mut self, at: usize) -> Vec<T> {
-        self.vec.split_off(at)
-    }
-
     /// See [`Vec::splice`]. Doesn't check if the operation would reduce the length of the vector below `M`.
     ///
     /// # Safety
@@ -787,6 +771,23 @@ impl<T, const M: usize> VecMin<T, M> {
         I: IntoIterator<Item = T>,
     {
         self.vec.splice(range, replace_with)
+    }
+
+    /// See [`Vec::split_off`]. Returns an error if the operation would reduce the length of the vector below `M`.
+    #[inline]
+    #[must_use]
+    pub fn split_off(&mut self, at: usize) -> Result<Vec<T>, ModifyError<M>> {
+        if at >= M {
+            Ok(self.vec.split_off(at))
+        } else {
+            Err(ModifyError)
+        }
+    }
+
+    /// See [`Vec::split_off`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    #[inline]
+    pub unsafe fn split_off_unchecked(&mut self, at: usize) -> Vec<T> {
+        self.vec.split_off(at)
     }
 
     /// See [`Vec::retain`]. Doesn't check if the operation would reduce the length of the vector below `M`.
