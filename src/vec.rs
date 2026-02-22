@@ -35,28 +35,48 @@ impl<T, const M: usize> VecMin<T, M> {
     /// Returns a slice to the first `M` elements of the vector, which are guaranteed to exist.
     #[inline]
     pub const fn min_slice(&self) -> &[T; M] {
-        unsafe { &*(self.vec.as_ptr() as *const [T; M]) }
+        self.split_at_min().0
     }
 
     /// Returns a mutable slice to the first `M` elements of the vector, which are guaranteed to exist.
     #[inline]
     pub const fn min_slice_mut(&mut self) -> &mut [T; M] {
-        unsafe { &mut *(self.vec.as_mut_ptr() as *mut [T; M]) }
+        self.split_at_min_mut().0
     }
 
     /// Returns a tuple of a slice to the first `M` elements of the vector, which are guaranteed to exist, and a slice to the remaining elements of the vector.
     #[inline]
-    pub fn split_at_min(&self) -> (&[T; M], &[T]) {
-        let min = unsafe { &*(self.vec.as_ptr() as *const [T; M]) };
-        let extra = unsafe { self.vec.get_unchecked(M..) };
+    pub const fn split_at_min(&self) -> (&[T; M], &[T]) {
+        debug_assert!(self.vec.len() >= M);
+
+        // Safety: Structural invariant that the `Vec` has a minimum length of `M`.
+        let min = unsafe { &*self.vec.as_ptr().cast() };
+
+        // Safety: Structural invariant that the `Vec` has a minimum length of `M`.
+        let extra = unsafe {
+            let data = self.vec.as_ptr().add(M);
+            let len = self.vec.len() - M;
+            slice::from_raw_parts(data, len)
+        };
+
         (min, extra)
     }
 
     /// Returns a tuple of a mutable slice to the first `M` elements of the vector, which are guaranteed to exist, and a mutable slice to the remaining elements of the vector.
     #[inline]
-    pub fn split_at_min_mut(&mut self) -> (&mut [T; M], &mut [T]) {
-        let min = unsafe { &mut *(self.vec.as_mut_ptr() as *mut [T; M]) };
-        let extra = unsafe { self.vec.get_unchecked_mut(M..) };
+    pub const fn split_at_min_mut(&mut self) -> (&mut [T; M], &mut [T]) {
+        debug_assert!(self.vec.len() >= M);
+
+        // Safety: Structural invariant that the `Vec` has a minimum length of `M`.
+        let min = unsafe { &mut *self.vec.as_mut_ptr().cast() };
+
+        // Safety: Structural invariant that the `Vec` has a minimum length of `M`.
+        let extra = unsafe {
+            let data = self.vec.as_mut_ptr().add(M);
+            let len = self.vec.len() - M;
+            slice::from_raw_parts_mut(data, len)
+        };
+
         (min, extra)
     }
 }
@@ -93,6 +113,7 @@ impl<T, const M: usize> VecMin<T, M> {
     #[inline]
     pub const fn const_new(vec: Vec<T>) -> Result<Self, ConstructError<T, M>> {
         if vec.len() >= M {
+            // Safety: We just checked that the length was at least `M`.
             Ok(unsafe { Self::new_unchecked(vec) })
         } else {
             Err(ConstructError(vec))
@@ -247,6 +268,7 @@ impl<T, const N: usize, const M: usize> TryFrom<VecMin<T, M>> for [T; N] {
 
     #[inline]
     fn try_from(vec_min: VecMin<T, M>) -> Result<[T; N], Self::Error> {
+        // Safety: We obtained the original `Vec` from a valid `VecMin`.
         vec_min
             .vec
             .try_into()
@@ -498,6 +520,9 @@ impl<T, const M: usize> VecMin<T, M> {
     }
 
     /// See [`Vec::pop`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// Safety:
+    /// - The length of the vector must be greater than `M` such that it doesn't decrease below `M`.
     #[inline]
     pub unsafe fn pop_unchecked(&mut self) -> Option<T> {
         self.vec.pop()
@@ -527,6 +552,9 @@ impl<T, const M: usize> VecMin<T, M> {
     }
 
     /// See [`Vec::pop_if`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// # Safety
+    /// - The length of the vector must be greater than `M` such that it doesn't decrease below `M`.
     #[inline]
     pub unsafe fn pop_if_unchecked(&mut self, pred: impl FnOnce(&mut T) -> bool) -> Option<T> {
         self.vec.pop_if(pred)
@@ -544,6 +572,9 @@ impl<T, const M: usize> VecMin<T, M> {
     }
 
     /// See [`Vec::remove`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// # Safety
+    /// - The length of the vector must be greater than `M` such that it doesn't decrease below `M`.
     #[inline]
     pub unsafe fn remove_unchecked(&mut self, index: usize) -> T {
         self.vec.remove(index)
@@ -561,6 +592,9 @@ impl<T, const M: usize> VecMin<T, M> {
     }
 
     /// See [`Vec::swap_remove`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// # Safety
+    /// - The length of the vector must be greater than `M` such that it doesn't decrease below `M`.
     #[inline]
     pub unsafe fn swap_remove_unchecked(&mut self, index: usize) -> T {
         self.vec.swap_remove(index)
@@ -590,6 +624,9 @@ impl<T, const M: usize> VecMin<T, M> {
     }
 
     /// See [`Vec::truncate`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// # Safety
+    /// - The target `len` must be greater than or equal to `M`.
     #[inline]
     pub unsafe fn truncate_unchecked(&mut self, len: usize) {
         self.vec.truncate(len)
@@ -619,6 +656,9 @@ impl<T, const M: usize> VecMin<T, M> {
     }
 
     /// See [`Vec::resize`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// # Safety
+    /// - The target `new_len` must be greater than or equal to `M`.
     #[inline]
     pub unsafe fn resize_unchecked(&mut self, new_len: usize, value: T)
     where
@@ -651,6 +691,9 @@ impl<T, const M: usize> VecMin<T, M> {
     }
 
     /// See [`Vec::resize_with`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// # Safety
+    /// - The target `new_len` must be greater than or equal to `M`.
     #[inline]
     pub unsafe fn resize_with_unchecked<F>(&mut self, new_len: usize, generator: F)
     where
@@ -676,6 +719,9 @@ impl<T, const M: usize> VecMin<T, M> {
     }
 
     /// See [`Vec::drain`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// # Safety
+    /// - The length of the vector after draining must be greater than or equal to `M`.
     #[inline]
     pub unsafe fn drain_unchecked<R>(&mut self, range: R) -> vec::Drain<'_, T>
     where
@@ -710,7 +756,26 @@ impl<T, const M: usize> VecMin<T, M> {
         }
     }
 
+    /// See [`Vec::split_off`]. Returns an error if the operation would reduce the length of the vector below `M`.
+    #[inline]
+    pub fn split_off(&mut self, at: usize) -> Result<Vec<T>, ModifyError<M>> {
+        if at >= M {
+            Ok(self.vec.split_off(at))
+        } else {
+            Err(ModifyError)
+        }
+    }
+
+    /// See [`Vec::split_off`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    #[inline]
+    pub unsafe fn split_off_unchecked(&mut self, at: usize) -> Vec<T> {
+        self.vec.split_off(at)
+    }
+
     /// See [`Vec::splice`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// # Safety
+    /// - The length of the vector after splicing must be greater than or equal to `M`.
     #[inline]
     pub unsafe fn splice_unchecked<R, I>(
         &mut self,
@@ -722,5 +787,77 @@ impl<T, const M: usize> VecMin<T, M> {
         I: IntoIterator<Item = T>,
     {
         self.vec.splice(range, replace_with)
+    }
+
+    /// See [`Vec::retain`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// There is no checked version of the method because the final length is impossible to know.
+    #[inline]
+    pub unsafe fn retain_unchecked<F>(&mut self, pred: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        self.vec.retain(pred);
+    }
+
+    /// See [`Vec::retain_mut`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// There is no checked version of the method because the final length is impossible to know.
+    #[inline]
+    pub unsafe fn retain_mut_unchecked<F>(&mut self, pred: F)
+    where
+        F: FnMut(&mut T) -> bool,
+    {
+        self.vec.retain_mut(pred);
+    }
+
+    /// See [`Vec::dedup`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// There is no checked version of the method because the final length is impossible to know.
+    #[inline]
+    pub unsafe fn dedup_unchecked(&mut self)
+    where
+        T: PartialEq,
+    {
+        self.vec.dedup();
+    }
+
+    /// See [`Vec::dedup_by`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// There is no checked version of the method because the final length is impossible to know.
+    #[inline]
+    pub unsafe fn dedup_by_unchecked<F>(&mut self, same_bucket: F)
+    where
+        F: FnMut(&mut T, &mut T) -> bool,
+    {
+        self.vec.dedup_by(same_bucket);
+    }
+
+    /// See [`Vec::dedup_by_key`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// There is no checked version of the method because the final length is impossible to know.
+    #[inline]
+    pub unsafe fn dedup_by_key_unchecked<F, K>(&mut self, key: F)
+    where
+        F: FnMut(&mut T) -> K,
+        K: PartialEq,
+    {
+        self.vec.dedup_by_key(key);
+    }
+
+    /// See [`Vec::extract_if`]. Doesn't check if the operation would reduce the length of the vector below `M`.
+    ///
+    /// There is no checked version of the method because the final length is impossible to know.
+    #[inline]
+    pub unsafe fn extract_if_unchecked<F, R>(
+        &mut self,
+        range: R,
+        filter: F,
+    ) -> vec::ExtractIf<'_, T, F>
+    where
+        R: RangeBounds<usize>,
+        F: FnMut(&mut T) -> bool,
+    {
+        self.vec.extract_if(range, filter)
     }
 }
