@@ -67,10 +67,11 @@ where
 /// Creates a [`VecOne`] containing the arguments.
 ///
 /// `vecone!` allows `VecOne`s to be defined with similar syntax to `vec!`, but with a minimum length of 1.
+/// The length must be constant, for non-constant length use checked constructors.
 #[macro_export]
 macro_rules! vecone {
     ($($x:expr),+ $(,)?) => {
-        $crate::vecmin![1; [ $($x),+ ]]
+        $crate::vecmin![1; [$($x),+]]
     };
     ($elem:expr; $n:expr) => {
         $crate::vecmin![1; [$elem; $n]]
@@ -124,4 +125,71 @@ macro_rules! vecmin {
     ($($x:expr),+ $(,)?) => {
         $crate::VecMin::from_array([$($x),+])
     };
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn slice_range() {
+        use super::slice_range;
+
+        assert_eq!(slice_range(&(..), ..5), 0..5);
+        assert_eq!(slice_range(&(1..), ..5), 1..5);
+        assert_eq!(slice_range(&(..3), ..5), 0..3);
+        assert_eq!(slice_range(&(1..3), ..5), 1..3);
+        assert_eq!(slice_range(&(1..=3), ..5), 1..4);
+    }
+
+    #[test]
+    fn vecone() {
+        let v = vecone![1, 1, 1];
+
+        assert_eq!(v.minimum(), 1);
+        assert_eq!(v.len(), 3);
+
+        let v = vecone![1; 3];
+
+        assert_eq!(v.minimum(), 1);
+        assert_eq!(v.len(), 3);
+    }
+
+    #[test]
+    fn vecmin_explicit() {
+        let v = vecmin![2; [1, 1, 1]];
+
+        assert_eq!(v.minimum(), 2);
+        assert_eq!(v.len(), 3);
+
+        let v = vecmin![2; [1; 3]];
+
+        assert_eq!(v.minimum(), 2);
+        assert_eq!(v.len(), 3);
+    }
+
+    #[test]
+    fn vecmin_implicit() {
+        let v = vecmin![1, 1, 1];
+
+        assert_eq!(v.minimum(), 3);
+        assert_eq!(v.len(), 3);
+
+        let v = vecmin![1; 3];
+
+        assert_eq!(v.minimum(), 3);
+        assert_eq!(v.len(), 3);
+    }
+
+    // ---- compile errors ----
+    // fn lt_min() {
+    //     let v = vecone![];
+    //     let v = vecone![1; 0];
+    //     let v = vecmin![5; [1, 1, 1, 1]];
+    //     let v = vecmin![5; [1; 4]];
+    // }
+
+    // fn nonconst() {
+    //     let n = 0;
+    //     let v = vecone![2; n];
+    //     let v = vecmin![2; [1; n]];
+    // }
 }
