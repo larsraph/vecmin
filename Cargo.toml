@@ -1,33 +1,6 @@
 [package]
 edition = "2024"
-name = "vec_min"
+name = "vecmin"
 version = "0.1.0"
 
 [dependencies]
-
-[package]
-categories = [
-  "tool",
-  "collections",
-  "no-std",
-  "utility",
-  "storage",
-]
-description = "A wrapper around `Vec` that guarantees a minimum length of `M`."
-edition = "2024"
-keywords = [
-  "vec",
-  "min",
-  "minimum",
-  "one",
-  "length",
-  "bound",
-  "bounded",
-  "non-empty",
-  "no-std",
-  "invariant",
-]
-name = "vec_min"
-readme = "README.md"
-repository = "https://github.com/larsraph/vec_min"
-version = "0.1.0"

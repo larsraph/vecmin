@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "vec_min"
+name = "vecmin"
 version = "0.1.0"
