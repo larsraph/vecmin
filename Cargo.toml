@@ -1,7 +1,7 @@
 [package]
 authors = ["Raphael L. <raphael.j.larsen@gmail.com>"]
 categories = ["data-structures", "no-std"]
-description = "Provides a `VecMin` and `VecOne` newtype wrapper around `Vec` that enforces a minimum length at compile time."
+description = "Provides a VecMin and VecOne newtype wrapper around Vec that enforces a minimum length at compile time."
 documentation = "https://docs.rs/vecmin"
 edition = "2024"
 homepage = "https://github.com/larsraph/vecmin"
