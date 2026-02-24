@@ -1,3 +1,5 @@
+//! Implementation of the [`VecMin`] and [`VecOne`] newtypes.
+
 use alloc::borrow::Cow;
 use alloc::boxed::Box;
 use alloc::collections::TryReserveError;
@@ -12,8 +14,14 @@ use core::slice;
 
 use crate::{ModifyError, slice_range};
 
+/// A [`VecMin`] with a minimum length of 1.
 pub type VecOne<T> = VecMin<T, 1>;
 
+/// A vector with a minimum length of `M`.
+///
+/// Most methods of `Vec` are available on `VecMin` except those that reduce the length of the vector an unknown amount.
+/// Methods that reduce the length of the vector by a known amount (e.g. `remove`, `truncate`) are available on `VecMin`
+/// but return an error if the operation would reduce the length of the vector below `M`.
 #[repr(transparent)]
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct VecMin<T, const M: usize> {
@@ -82,6 +90,7 @@ impl<T, const M: usize> VecMin<T, M> {
 }
 
 // --- Constructors, Convertors, and Destructors ---
+/// A vector that is too short to be a valid `VecMin` returned as an error in a constructor.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstructError<T, const M: usize>(pub Vec<T>);
 

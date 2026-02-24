@@ -1,3 +1,5 @@
+//! Provides a `VecMin` and `VecOne` newtype wrapper around `Vec` that enforces a minimum length at compile time.
+
 #![no_std]
 
 pub mod vec;
@@ -13,6 +15,7 @@ use core::ops::{Bound, Range, RangeBounds, RangeTo};
 
 pub use vec::{VecMin, VecOne};
 
+/// An error indicating that an operation would reduce the length of a vector below its minimum required length.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ModifyError<const M: usize>;
 
