@@ -714,3 +714,32 @@ impl<T: PartialOrd, const M: usize> PartialOrd<VecMin<T, M>> for Vec<T> {
         self.as_slice().partial_cmp(other.as_slice())
     }
 }
+
+#[cfg(feature = "serde")]
+mod __serde {
+    use serde::de::Error;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    use super::*;
+
+    impl<T: Serialize, const M: usize> Serialize for VecMin<T, M> {
+        #[inline]
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            self.vec.serialize(serializer)
+        }
+    }
+
+    impl<'de, T: Deserialize<'de> + Debug, const M: usize> Deserialize<'de> for VecMin<T, M> {
+        #[inline]
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let vec = Vec::deserialize(deserializer)?;
+            Self::try_from_vec(vec).map_err(Error::custom)
+        }
+    }
+}

@@ -14,3 +14,7 @@ rust-version = "1.87"
 version = "0.1.0"
 
 [dependencies]
+serde = { version = "1.0.228", features = ["alloc"], default-features = false, optional = true }
+
+[features]
+serde = ["dep:serde"]
