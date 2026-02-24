@@ -5,6 +5,7 @@ use alloc::boxed::Box;
 use alloc::collections::TryReserveError;
 use alloc::vec::{self, Vec};
 use core::borrow::{Borrow, BorrowMut};
+use core::cmp::Ordering;
 use core::error::Error;
 use core::fmt::{self, Debug, Display, Formatter};
 use core::iter::repeat_with;
@@ -23,7 +24,7 @@ pub type VecOne<T> = VecMin<T, 1>;
 /// Methods that reduce the length of the vector by a known amount (e.g. `remove`, `truncate`) are available on `VecMin`
 /// but return an error if the operation would reduce the length of the vector below `M`.
 #[repr(transparent)]
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Hash)]
 pub struct VecMin<T, const M: usize> {
     vec: Vec<T>,
 }
@@ -168,6 +169,12 @@ impl<T, const M: usize> VecMin<T, M> {
     #[inline]
     pub fn into_inner(self) -> Vec<T> {
         self.vec
+    }
+
+    /// Returns a reference to the inner `Vec`.
+    #[inline]
+    pub fn vec(&self) -> &Vec<T> {
+        &self.vec
     }
 
     /// See [`Vec::into_boxed_slice`].
@@ -653,5 +660,57 @@ impl<T, const M: usize> VecMin<T, M> {
         } else {
             Err(ModifyError)
         }
+    }
+}
+
+// --- Equality & Ordering ---
+impl<T: PartialEq, const M1: usize, const M2: usize> PartialEq<VecMin<T, M2>> for VecMin<T, M1> {
+    #[inline]
+    fn eq(&self, other: &VecMin<T, M2>) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+impl<T: Eq, const M: usize> Eq for VecMin<T, M> {}
+
+impl<T: PartialEq, const M: usize> PartialEq<Vec<T>> for VecMin<T, M> {
+    #[inline]
+    fn eq(&self, other: &Vec<T>) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+impl<T: PartialEq, const M: usize> PartialEq<VecMin<T, M>> for Vec<T> {
+    #[inline]
+    fn eq(&self, other: &VecMin<T, M>) -> bool {
+        self.as_slice() == other.as_slice()
+    }
+}
+
+impl<T: PartialOrd, const M1: usize, const M2: usize> PartialOrd<VecMin<T, M2>> for VecMin<T, M1> {
+    #[inline]
+    fn partial_cmp(&self, other: &VecMin<T, M2>) -> Option<Ordering> {
+        self.as_slice().partial_cmp(other.as_slice())
+    }
+}
+
+impl<T: Ord, const M: usize> Ord for VecMin<T, M> {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.as_slice().cmp(other.as_slice())
+    }
+}
+
+impl<T: PartialOrd, const M: usize> PartialOrd<Vec<T>> for VecMin<T, M> {
+    #[inline]
+    fn partial_cmp(&self, other: &Vec<T>) -> Option<Ordering> {
+        self.as_slice().partial_cmp(other.as_slice())
+    }
+}
+
+impl<T: PartialOrd, const M: usize> PartialOrd<VecMin<T, M>> for Vec<T> {
+    #[inline]
+    fn partial_cmp(&self, other: &VecMin<T, M>) -> Option<Ordering> {
+        self.as_slice().partial_cmp(other.as_slice())
     }
 }
